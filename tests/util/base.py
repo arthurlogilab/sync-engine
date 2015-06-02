@@ -70,6 +70,13 @@ def db(dbloader):
     dbloader.session.close()
 
 
+@yield_fixture(scope='function')
+def empty_db(request, config):
+    testdb = TestDB(config, None)
+    yield testdb
+    testdb.teardown()
+
+
 def mock_redis_client(*args, **kwargs):
     return None
 
@@ -142,6 +149,7 @@ class TestDB(object):
     def __init__(self):
         from inbox.ignition import main_engine
         engine = main_engine()
+
         # Set up test database
         self.engine = engine
 
@@ -219,7 +227,33 @@ def default_namespace(db, default_account):
 
 
 @fixture(scope='function')
+<<<<<<< HEAD
 def contact_sync(config, db, default_account):
+=======
+def gmail_account(db):
+    import platform
+    from inbox.models import Namespace
+    from inbox.models.backends.gmail import GmailAccount
+
+    account = db.session.query(GmailAccount).first()
+    if account is None:
+        with db.session.no_autoflush:
+            namespace = Namespace()
+            account = GmailAccount(
+                email_address='almondsunshine@gmail.com',
+                refresh_token='tearsofgold',
+                sync_host=platform.node(),
+                namespace=namespace)
+            account.password = 'COyPtHmj9E9bvGdN'
+            db.session.add(account)
+    db.session.commit()
+
+    return account
+
+
+@fixture(scope='function')
+def contact_sync(config, db):
+>>>>>>> 4989432... Replace Tags with Folders/ Labels: I
     from inbox.contacts.remote_sync import ContactSync
     return ContactSync('inboxapptest@gmail.com', 'gmail', default_account.id,
                        default_account.namespace.id)
