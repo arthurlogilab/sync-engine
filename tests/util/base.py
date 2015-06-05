@@ -227,9 +227,6 @@ def default_namespace(db, default_account):
 
 
 @fixture(scope='function')
-<<<<<<< HEAD
-def contact_sync(config, db, default_account):
-=======
 def gmail_account(db):
     import platform
     from inbox.models import Namespace
@@ -252,8 +249,7 @@ def gmail_account(db):
 
 
 @fixture(scope='function')
-def contact_sync(config, db):
->>>>>>> 4989432... Replace Tags with Folders/ Labels: I
+def contact_sync(config, db, default_account):
     from inbox.contacts.remote_sync import ContactSync
     return ContactSync('inboxapptest@gmail.com', 'gmail', default_account.id,
                        default_account.namespace.id)
