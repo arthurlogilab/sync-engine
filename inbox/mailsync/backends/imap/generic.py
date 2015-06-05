@@ -88,9 +88,7 @@ from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapThread,
                                         ImapUid, ImapFolderInfo)
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
-from inbox.mailsync.backends.base import (create_db_objects,
-                                          commit_uids, MailsyncDone,
-                                          mailsync_session_scope,
+from inbox.mailsync.backends.base import (MailsyncDone, mailsync_session_scope,
                                           THROTTLE_WAIT)
 from inbox.heartbeat.store import HeartbeatStatusProxy
 from inbox.events.ical import import_attached_events
@@ -380,7 +378,6 @@ class FolderSyncEngine(Greenlet):
                         del data_sha256_message[data_sha256]
                     else:
                         self.download_and_commit_uids(crispin_client,
-                                                      self.folder_name,
                                                       [remote_uid])
                     self.heartbeat_status.publish()
                     # FIXME: do we want to throttle the account when recovering
@@ -402,8 +399,7 @@ class FolderSyncEngine(Greenlet):
     def download_uids(self, crispin_client, download_stack):
         while not download_stack.empty():
             uid, metadata = download_stack.peekitem()
-            self.download_and_commit_uids(crispin_client, self.folder_name,
-                                          [uid])
+            self.download_and_commit_uids(crispin_client, [uid])
             download_stack.pop(uid)
             report_progress(self.account_id, self.folder_name, 1,
                             len(download_stack))
@@ -495,20 +491,30 @@ class FolderSyncEngine(Greenlet):
         common.remove_deleted_uids(self.account_id, db_session, to_delete,
                                    self.folder_id)
 
-    def download_and_commit_uids(self, crispin_client, folder_name, uids):
-        # Note that folder_name here might *NOT* be equal to self.folder_name,
-        # because, for example, we download messages via the 'All Mail' folder
-        # in Gmail.
+    def download_and_commit_uids(self, crispin_client, uids):
         raw_messages = crispin_client.uids(uids)
         if not raw_messages:
             return 0
+
+        new_uids = set()
         with self.syncmanager_lock:
+            # there is the possibility that another green thread has already
+            # downloaded some message(s) from this batch... check within the
+            # lock
             with mailsync_session_scope() as db_session:
-                new_imapuids = create_db_objects(
-                    self.account_id, db_session, log, folder_name,
-                    raw_messages, self.create_message)
-                commit_uids(db_session, new_imapuids, self.provider_name)
-        return len(new_imapuids)
+                account = db_session.query(Account).get(self.account_id)
+                folder = db_session.query(Folder).get(self.folder_id)
+                for msg in raw_messages:
+                    uid = self.create_message(db_session, account, folder,
+                                              msg)
+                    if uid is not None:
+                        db_session.add(uid)
+                        db_session.flush()
+                        new_uids.add(uid)
+                db_session.commit()
+
+        self.saved_uids.update(new_uids)
+        return len(new_uids)
 
     def update_metadata(self, crispin_client, updated):
         """ Update flags (the only metadata that can change). """
