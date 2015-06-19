@@ -16,7 +16,7 @@ from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Contact, Calendar, Event, Transaction,
                           DataProcessingCache)
 from inbox.api.sending import send_draft, send_raw_mime
-from inbox.api.update import update_message
+from inbox.api.update import update_message, update_thread
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (get_attachments, get_calendar,
@@ -229,7 +229,7 @@ def thread_api_update(public_id):
     except NoResultFound:
         raise NotFoundError("Couldn't find thread `{0}` ".format(public_id))
     data = request.get_json(force=True)
-    # STOPSHIP(emfree): implement.
+    update_thread(thread, data, g.db_session)
     return g.encoder.jsonify(thread)
 
 
