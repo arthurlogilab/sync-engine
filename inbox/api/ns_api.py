@@ -145,6 +145,7 @@ def thread_query_api():
     g.parser.add_argument('last_message_after', type=timestamp,
                           location='args')
     g.parser.add_argument('filename', type=bounded_str, location='args')
+    g.parser.add_argument('in', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('view', type=view, location='args')
 
@@ -164,6 +165,7 @@ def thread_query_api():
         last_message_before=args['last_message_before'],
         last_message_after=args['last_message_after'],
         filename=args['filename'],
+        in_=args['in'],
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
@@ -258,11 +260,13 @@ def message_query_api():
     g.parser.add_argument('last_message_after', type=timestamp,
                           location='args')
     g.parser.add_argument('filename', type=bounded_str, location='args')
+    g.parser.add_argument('in', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('view', type=view, location='args')
     args = strict_parse_args(g.parser, request.args)
-    messages = filtering.messages(
+    messages = filtering.messages_or_drafts(
         namespace_id=g.namespace.id,
+        drafts=False,
         subject=args['subject'],
         thread_public_id=args['thread_id'],
         to_addr=args['to'],
@@ -275,6 +279,7 @@ def message_query_api():
         last_message_before=args['last_message_before'],
         last_message_after=args['last_message_after'],
         filename=args['filename'],
+        in_=args['in'],
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
@@ -773,11 +778,13 @@ def draft_query_api():
     g.parser.add_argument('last_message_after', type=timestamp,
                           location='args')
     g.parser.add_argument('filename', type=bounded_str, location='args')
+    g.parser.add_argument('in', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('view', type=view, location='args')
     args = strict_parse_args(g.parser, request.args)
-    drafts = filtering.drafts(
+    drafts = filtering.messages_or_drafts(
         namespace_id=g.namespace.id,
+        drafts=True,
         subject=args['subject'],
         thread_public_id=args['thread_id'],
         to_addr=args['to'],
@@ -790,6 +797,7 @@ def draft_query_api():
         last_message_before=args['last_message_before'],
         last_message_after=args['last_message_after'],
         filename=args['filename'],
+        in_=args['in'],
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
