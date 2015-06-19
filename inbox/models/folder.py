@@ -36,7 +36,7 @@ class Folder(MailSyncBase):
     # folders as per
     # https://msdn.microsoft.com/en-us/library/ee624913(v=exchg.80).aspx
     name = Column(String(MAX_FOLDER_NAME_LENGTH, collation='utf8mb4_bin'),
-                  nullable=False)
+                  nullable=True)
     canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
 
     # TODO[k]: What if Category deleted via API?
