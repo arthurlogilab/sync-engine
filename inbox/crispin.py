@@ -49,7 +49,7 @@ GMetadata = namedtuple('GMetadata', 'msgid thrid')
 RawMessage = namedtuple(
     'RawImapMessage',
     'uid internaldate flags body g_thrid g_msgid g_labels')
-RawFolder = namedtuple('RawFolder', 'display_name canonical_name')
+RawFolder = namedtuple('RawFolder', 'display_name role')
 
 # Lazily-initialized map of account ids to lock objects.
 # This prevents multiple greenlets from concurrently creating duplicate
@@ -368,13 +368,13 @@ class CrispinClient(object):
     def folder_names(self, force_resync=False):
         """
         Return the folder names for the account as a mapping from
-        recognized folder_category: list of folder names in the category,
+        recognized role: list of folder names,
         for example: 'sent': ['Sent Items', 'Sent'].
 
-        The list of recognized folder categories is in:
+        The list of recognized folder roles is in:
         inbox/models/constants.py
 
-        Folders that do not belong to a recognized category are mapped to
+        Folders that do not belong to a recognized role are mapped to
         None, for example: None: ['MyFolder', 'OtherFolder'].
 
         The mapping is also cached in self._folder_names
@@ -391,7 +391,7 @@ class CrispinClient(object):
 
             raw_folders = self.folders()
             for f in raw_folders:
-                self._folder_names[f.canonical_name].append(f.display_name)
+                self._folder_names[f.role].append(f.display_name)
 
         return self._folder_names
 
@@ -420,8 +420,7 @@ class CrispinClient(object):
 
     def _process_folder(self, display_name, flags):
         """
-        Determine the category and canonical_name for the remote folder from
-        its `name` and `flags`.
+        Determine the role for the remote folder from its `name` and `flags`.
 
         Returns
         -------
@@ -452,17 +451,16 @@ class CrispinClient(object):
         flag_map = {'\\Trash': 'trash', '\\Sent': 'sent', '\\Drafts': 'drafts',
                     '\\Junk': 'spam', '\\Inbox': 'inbox', '\\Spam': 'spam'}
 
-        canonical_name = default_folder_map.get(display_name.lower())
+        role = default_folder_map.get(display_name.lower())
 
-        if not canonical_name:
-            canonical_name = folder_map.get(display_name)
+        if not role:
+            role = folder_map.get(display_name)
 
-        if not canonical_name:
+        if not role:
             for flag in flags:
-                canonical_name = flag_map.get(flag)
+                role = flag_map.get(flag)
 
-        return RawFolder(display_name=display_name,
-                         canonical_name=canonical_name)
+        return RawFolder(display_name=display_name, role=role)
 
     def folder_status(self, folder):
         status = [long(val) for val in self.conn.folder_status(
@@ -817,14 +815,14 @@ class GmailCrispinClient(CondStoreCrispinClient):
     def folder_names(self, force_resync=False):
         """
         Return the folder names ( == label names for Gmail) for the account
-        as a mapping from recognized category: list of folder names in the
-        category, for example: 'sent': ['Sent Items', 'Sent'].
+        as a mapping from recognized role: list of folder names in the
+        role, for example: 'sent': ['Sent Items', 'Sent'].
 
         The list of recognized categories is in:
         inbox/models/constants.py
 
-        Folders that do not belong to a recognized category are mapped to
-        None, for example: None: ['MyFolder', 'OtherFolder'].
+        Folders that do not belong to a recognized role are mapped to None, for
+        example: None: ['MyFolder', 'OtherFolder'].
 
         The mapping is also cached in self._folder_names
 
@@ -840,7 +838,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
 
             raw_folders = self.folders()
             for f in raw_folders:
-                self._folder_names[f.canonical_name].append(f.display_name)
+                self._folder_names[f.role].append(f.display_name)
 
         return self._folder_names
 
@@ -882,18 +880,17 @@ class GmailCrispinClient(CondStoreCrispinClient):
                     '\\Sent': 'sent', '\\Junk': 'spam', '\\Flagged': 'starred',
                     '\\Trash': 'trash'}
 
-        canonical_name = None
+        role = None
         if '\\All' in flags:
-            canonical_name = 'all'
+            role = 'all'
         elif display_name.lower() == 'inbox':
-            canonical_name = 'inbox'
+            role = 'inbox'
         else:
             for flag in flags:
                 if flag in flag_map:
-                    canonical_name = flag_map[flag]
+                    role = flag_map[flag]
 
-        return RawFolder(display_name=display_name,
-                         canonical_name=canonical_name)
+        return RawFolder(display_name=display_name, role=role)
 
     def uids(self, uids):
         raw_messages = self.conn.fetch(uids, ['BODY.PEEK[] INTERNALDATE FLAGS',
