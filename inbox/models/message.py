@@ -479,12 +479,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         parsed = mime.from_string(self.full_body.data)
         return parsed.headers.get(header)
 
-    @property
-    def account(self):
-        return self.namespace.account
+    def update_metadata(self, session, account, is_draft):
+        assert account.namespace.id == self.namespace_id
 
-    def update_metadata(self, session, is_draft):
-        if self.account.discriminator == 'easaccount':
+        if account.discriminator == 'easaccount':
             uids = self.easuids
         else:
             uids = self.imapuids
@@ -497,7 +495,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         for i in uids:
             categories.update(i.categories)
 
-        if self.account.category_type == 'folder':
+        if account.category_type == 'folder':
             categories = [select_category(categories)]
 
         self.categories = categories
