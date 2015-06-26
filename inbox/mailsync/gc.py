@@ -11,7 +11,6 @@ log = get_logger()
 DEFAULT_MESSAGE_TTL = 120
 
 
-# FIXFIXFIX[k]: Adapt to new Folder/Label abstraction
 class DeleteHandler(gevent.Greenlet):
     """
     We don't outright delete message objects when all their associated
@@ -89,6 +88,7 @@ class DeleteHandler(gevent.Greenlet):
                     thread.subject = first_message.subject
                     thread.subjectdate = first_message.received_date
                     thread.recentdate = last_message.received_date
+                    thread.snippet = last_message.snippet
                 # YES this is at the right indentation level. Delete statements
                 # may cause InnoDB index locks to be acquired, so we opt to
                 # simply commit after each delete in order to prevent bulk
