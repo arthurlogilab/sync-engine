@@ -104,7 +104,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
                 if folder.name != raw_folder.display_name:
                     log.info('Folder name changed on remote',
                              account_id=account_id,
-                             category=raw_folder.role,
+                             role=raw_folder.role,
                              new_name=raw_folder.display_name,
                              name=folder.name)
                     folder.name = raw_folder.display_name
