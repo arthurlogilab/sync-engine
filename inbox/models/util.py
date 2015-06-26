@@ -65,8 +65,9 @@ def transaction_objects():
         'event': Event,
         'file': Block,
         'message': Message,
-        'category': Category,
-        'thread': Thread
+        'thread': Thread,
+        'label': Category,
+        'folder': Category
     }
 
 

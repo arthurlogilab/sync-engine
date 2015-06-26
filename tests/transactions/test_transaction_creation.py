@@ -1,5 +1,5 @@
 from sqlalchemy import desc
-from inbox.models import Transaction, Tag, Calendar
+from inbox.models import Transaction, Calendar
 from inbox.models.mixins import HasRevisions
 from inbox.models.util import transaction_objects
 from tests.util.base import add_fake_message, add_fake_thread, add_fake_event
@@ -18,24 +18,6 @@ def test_thread_insert_creates_transaction(db, default_namespace):
     transaction = get_latest_transaction(db.session, 'thread', thr.id,
                                          default_namespace.id)
     assert transaction.command == 'insert'
-
-
-def test_thread_tag_updates_create_transactions(db, default_namespace):
-    thr = add_fake_thread(db.session, default_namespace.id)
-
-    new_tag = Tag(name='foo', namespace_id=default_namespace.id)
-    db.session.add(new_tag)
-    db.session.commit()
-
-    thr.apply_tag(new_tag)
-    transaction = get_latest_transaction(db.session, 'thread', thr.id,
-                                         default_namespace.id)
-    assert transaction.command == 'update'
-
-    thr.remove_tag(new_tag)
-    next_transaction = get_latest_transaction(db.session, 'thread', thr.id,
-                                              default_namespace.id)
-    assert next_transaction.id != transaction
 
 
 def test_message_insert_creates_transaction(db, default_namespace):

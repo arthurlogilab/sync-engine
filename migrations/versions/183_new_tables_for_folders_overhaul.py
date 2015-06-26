@@ -26,6 +26,7 @@ def upgrade():
         sa.Column('name', sa.String(length=191, collation='utf8mb4_bin'),
                   nullable=True),
         sa.Column('display_name', sa.String(length=191), nullable=False),
+        sa.Column('type_', sa.Enum('folder', 'label'), nullable=False),
         sa.ForeignKeyConstraint(['namespace_id'], ['namespace.id'],
                                 name='category_fk1', ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),

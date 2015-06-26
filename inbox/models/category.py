@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, String, Integer, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -12,8 +12,9 @@ log = get_logger()
 
 
 class Category(MailSyncBase, HasRevisions):
-    # STOPSHIP(emfree): versioning must distinguish between folders and labels.
-    API_OBJECT_NAME = 'category'
+    @property
+    def API_OBJECT_NAME(self):
+        return self.type_
 
     # Need `use_alter` here to avoid circular dependencies
     namespace_id = Column(Integer,
@@ -30,8 +31,10 @@ class Category(MailSyncBase, HasRevisions):
     display_name = Column(String(MAX_INDEXABLE_LENGTH,
                                  collation='utf8mb4_bin'), nullable=False)
 
+    type_ = Column(Enum('folder', 'label'), nullable=False, default='folder')
+
     @classmethod
-    def find_or_create(cls, session, namespace_id, name, display_name):
+    def find_or_create(cls, session, namespace_id, name, display_name, type_):
         try:
             obj = session.query(cls).filter(
                 cls.namespace_id == namespace_id,
@@ -39,7 +42,7 @@ class Category(MailSyncBase, HasRevisions):
                 cls.display_name == display_name).one()
         except NoResultFound:
             obj = cls(namespace_id=namespace_id, name=name,
-                      display_name=display_name)
+                      display_name=display_name, type_=type_)
             session.add(obj)
         except MultipleResultsFound:
             log.error('Duplicate category rows for namespace_id {}, '

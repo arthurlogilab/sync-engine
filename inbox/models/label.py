@@ -62,7 +62,7 @@ class Label(MailSyncBase):
             obj = cls(account=account, name=name, canonical_name=role)
             obj.category = Category.find_or_create(
                 session, namespace_id=account.namespace.id, name=role,
-                display_name=name)
+                display_name=name, type_='label')
             session.add(obj)
         except MultipleResultsFound:
             log.error('Duplicate label rows for name {}, account_id {}'

@@ -85,9 +85,11 @@ def remove_deleted_uids(account_id, session, uids, folder_id):
 
         # Don't outright delete messages. Just mark them as 'deleted' and wait
         # for the asynchronous dangling-message-collector to delete them.
-        messages_to_delete = {m for m in affected_messages if not m.imapuids}
-        for message in messages_to_delete:
-            message.mark_for_deletion()
+        for message in affected_messages:
+            message.update_metadata(session, message.is_draft)
+            if not message.imapuids:
+                message.mark_for_deletion()
+
         session.commit()
 
 

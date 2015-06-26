@@ -201,7 +201,7 @@ def syncback_service():
 def default_account(db):
     import platform
     from inbox.models.backends.gmail import GmailAccount
-    from inbox.models import Namespace, Folder
+    from inbox.models import Namespace
     ns = Namespace()
     account = GmailAccount(
         sync_host=platform.node(),
@@ -209,13 +209,6 @@ def default_account(db):
     account.namespace = ns
     account.create_emailed_events_calendar()
     account.refresh_token = 'faketoken'
-    account.inbox_folder = Folder(canonical_name='inbox', name='Inbox',
-                                  account=account)
-    account.sent_folder = Folder(canonical_name='sent', name='[Gmail]/Sent',
-                                 account=account)
-    account.drafts_folder = Folder(canonical_name='drafts',
-                                   name='[Gmail]/Drafts',
-                                   account=account)
     db.session.add(account)
     db.session.commit()
     return account
@@ -224,6 +217,22 @@ def default_account(db):
 @fixture(scope='function')
 def default_namespace(db, default_account):
     return default_account.namespace
+
+
+@fixture(scope='function')
+def generic_account(db):
+    from inbox.models.backends.generic import GenericAccount
+    from inbox.models import Namespace
+    ns = Namespace()
+    account = GenericAccount(
+        email_address='inboxapptest@example.com',
+        provider='custom')
+    account.namespace = ns
+    account.create_emailed_events_calendar()
+    account.password = 'bananagrams'
+    db.session.add(account)
+    db.session.commit()
+    return account
 
 
 @fixture(scope='function')

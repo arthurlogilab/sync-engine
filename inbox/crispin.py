@@ -756,30 +756,21 @@ class GmailCrispinClient(CondStoreCrispinClient):
             Folders to sync (as strings).
 
         """
-        missing, to_sync = [], []
-        have_folders = self.folder_names()
+        present_folders = self.folder_names()
 
-        # The `All Mail` folder is the only folder /required/ for sync
-        required_folders = {'all': 'All Mail'}
-        for folder in required_folders:
-            if folder not in have_folders:
-                missing.append(required_folders.get(folder))
-            to_sync.append(have_folders[folder][0])
-
-        if missing:
+        if 'all' not in present_folders:
             raise GmailSettingError(
-                "Account {} ({}) is missing the {} folder(s). This is "
+                "Account {} ({}) is missing the 'All Mail' folder. This is "
                 "probably due to 'Show in IMAP' being disabled. "
                 "Please enable at "
                 "https://mail.google.com/mail/#settings/labels"
-                .format(self.account_id, self.email_address,
-                        " and ".join(missing)))
+                .format(self.account_id, self.email_address))
 
         # If the account has Trash, Spam folders, sync those too.
-        for folder in ['trash', 'spam']:
-            if folder in have_folders:
-                to_sync.append(have_folders[folder][0])
-
+        to_sync = []
+        for folder in ['all', 'trash', 'spam']:
+            if folder in present_folders:
+                to_sync.append(present_folders[folder][0])
         return to_sync
 
     def flags(self, uids):

@@ -68,8 +68,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             with connection_pool(self.account_id).get() as crispin_client:
                 # Get a fresh list of the folder names from the remote
                 remote_folders = crispin_client.folders()
-                self.save_folder_names(db_session, self.account_id,
-                                       remote_folders)
+                self.save_folder_names(db_session, remote_folders)
                 # The folders we should be syncing
                 sync_folders = crispin_client.sync_folders()
 
@@ -87,7 +86,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                         .format(folder_name, self.account_id))
             return sync_folder_names_ids
 
-    def save_folder_names(self, db_session, account_id, raw_folders):
+    def save_folder_names(self, db_session, raw_folders):
         """
         Save the folders present on the remote backend for an account.
 
@@ -106,7 +105,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         comparisons.
 
         """
-        account = db_session.query(Account).get(account_id)
+        account = db_session.query(Account).get(self.account_id)
         remote_folder_names = {f.display_name.rstrip()[:MAX_FOLDER_NAME_LENGTH]
                                for f in raw_folders}
 
@@ -115,14 +114,14 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             format(account.email_address)
 
         local_folders = {f.name: f for f in db_session.query(Folder).filter(
-                         Folder.account_id == account_id)}
+                         Folder.account_id == self.account_id)}
 
         # Delete folders no longer present on the remote.
         # Note that the folder with canonical_name='inbox' cannot be deleted;
         # remote_folder_names will always contain an entry corresponding to it.
         discard = set(local_folders) - remote_folder_names
         for name in discard:
-            log.info('Folder deleted from remote', account_id=account_id,
+            log.info('Folder deleted from remote', account_id=self.account_id,
                      name=name)
             db_session.delete(local_folders[name])
 

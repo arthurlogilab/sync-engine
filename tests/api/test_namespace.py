@@ -12,7 +12,6 @@ def test_namespace(api_client, generic_account, gmail_account):
     assert resp_data['account_id'] == generic_account.public_id
     assert resp_data['email_address'] == generic_account.email_address
     assert resp_data['name'] == generic_account.name
-    assert resp_data['provider'] == 'yahoo'
     assert resp_data['organization_unit'] == 'folder'
 
     resp_data = api_client.get_data('', gmail_account.namespace.public_id)

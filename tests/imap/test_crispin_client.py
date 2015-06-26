@@ -241,31 +241,31 @@ def test_gmail_folders(monkeypatch):
          (('\\HasNoChildren', '\\Trash'), '/', u'[Gmail]/Trash'),
          (('\\HasNoChildren',), '/', u'reference')]
 
+    role_map = {
+        '[Gmail]/All Mail': 'all',
+        'INBOX': 'inbox',
+        '[Gmail]/Trash': 'trash',
+        '[Gmail]/Spam': 'spam',
+        '[Gmail]/Drafts': 'drafts',
+        '[Gmail]/Sent Mail': 'sent',
+        '[Gmail]/Important': 'important',
+        '[Gmail]/Starred': 'starred',
+        'reference': None
+    }
+
     client = patch_gmail_client(monkeypatch, folders)
 
     raw_folders = client.folders()
     # Should not contain the `\\Noselect' folder
     assert len(raw_folders) == len(folders) - 1
-    for f in raw_folders:
-        if f.name in ['INBOX', '[Gmail]/All Mail', '[Gmail]/Trash',
-                      '[Gmail]/Spam']:
-            assert f.canonical_name in ['inbox', 'all', 'trash', 'spam']
-            assert f.category == f.canonical_name
-        elif f.name in ['[Gmail]/Drafts', '[Gmail]/Important',
-                        '[Gmail]/Sent Mail', '[Gmail]/Starred']:
-            assert f.canonical_name is None
-            assert f.category in ['drafts', 'important', 'sent', 'starred']
-        else:
-            assert f.name in ['reference']
-            assert f.canonical_name is None
-            assert f.category is None
+    assert {f.display_name: f.role for f in raw_folders} == role_map
 
     folder_names = client.folder_names()
-    for category in ['inbox', 'all', 'trash', 'drafts', 'important', 'sent',
-                     'spam', 'starred']:
-        assert category in folder_names
+    for role in ['inbox', 'all', 'trash', 'drafts', 'important', 'sent',
+                 'spam', 'starred']:
+        assert role in folder_names
 
-        names = folder_names[category]
+        names = folder_names[role]
         assert isinstance(names, list) and len(names) == 1
 
 
@@ -280,31 +280,35 @@ def test_imap_folders(monkeypatch):
          (('\\HasNoChildren', '\\Trash'), '/', u'Trash'),
          (('\\HasNoChildren',), '/', u'reference')]
 
+    role_map = {
+        'INBOX': 'inbox',
+        'Trash': 'trash',
+        'Drafts': 'drafts',
+        'Sent': 'sent',
+        'Sent Items': 'sent',
+        'Spam': 'spam'
+    }
+
     client = patch_generic_client(monkeypatch, folders)
 
     raw_folders = client.folders()
     # Should not contain the `\\Noselect' folder
     assert len(raw_folders) == len(folders) - 1
     for f in raw_folders:
-        if f.name in ['INBOX']:
-            assert f.canonical_name in ['inbox']
-            assert f.category == f.canonical_name
-        elif f.name in ['Trash', 'Drafts', 'Sent', 'Sent Items', 'Spam']:
-            assert f.canonical_name is None
-            assert f.category in ['trash', 'drafts', 'sent', 'spam']
+        if f.display_name in role_map:
+            assert f.role == role_map[f.display_name]
         else:
-            assert f.name in ['reference']
-            assert f.canonical_name is None
-            assert f.category is None
+            assert f.display_name in ['reference']
+            assert f.role is None
 
     folder_names = client.folder_names()
-    for category in ['inbox', 'trash', 'drafts', 'sent', 'spam']:
-        assert category in folder_names
+    for role in ['inbox', 'trash', 'drafts', 'sent', 'spam']:
+        assert role in folder_names
 
-        names = folder_names[category]
+        names = folder_names[role]
         assert isinstance(names, list)
 
-        if category == 'sent':
+        if role == 'sent':
             assert len(names) == 2
         else:
             assert len(names) == 1

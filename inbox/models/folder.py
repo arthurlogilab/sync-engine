@@ -46,11 +46,11 @@ class Folder(MailSyncBase):
                         cascade='all, delete-orphan'))
 
     @classmethod
-    def find_or_create(cls, session, account, name, category=None):
+    def find_or_create(cls, session, account, name, role=None):
         q = session.query(cls).filter(cls.account_id == account.id)
 
-        if category is not None:
-            q = q.filter(cls.canonical_name == category)
+        if role is not None:
+            q = q.filter(cls.canonical_name == role)
 
         # Remove trailing whitespace, truncate to max folder name length.
         # Not ideal but necessary to work around MySQL limitations.
@@ -64,10 +64,10 @@ class Folder(MailSyncBase):
         try:
             obj = q.one()
         except NoResultFound:
-            obj = cls(account=account, name=name, canonical_name=category)
+            obj = cls(account=account, name=name, canonical_name=role)
             obj.category = Category.find_or_create(
-                session, namespace_id=account.namespace.id, name=category,
-                display_name=name)
+                session, namespace_id=account.namespace.id, name=role,
+                display_name=name, type_='folder')
             session.add(obj)
         except MultipleResultsFound:
             log.info('Duplicate folder rows for name {}, account_id {}'

@@ -471,6 +471,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         return [part for part in self.parts
                 if part.block.content_type == 'text/calendar']
 
+    @property
+    def account(self):
+        return self.namespace.account
+
     def get_header(self, header, mid):
         if self.decode_error:
             log.warning('Error getting message header', mid=mid)

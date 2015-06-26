@@ -53,7 +53,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
         ImapSyncMonitor.__init__(self, *args, **kwargs)
         self.sync_engine_class = GmailFolderSyncEngine
 
-    def save_folder_names(self, db_session, account_id, raw_folders):
+    def save_folder_names(self, db_session, raw_folders):
         """
         Save the folders, labels present on the remote backend for an account.
 
@@ -72,7 +72,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
         comparisons.
 
         """
-        account = db_session.query(Account).get(account_id)
+        account = db_session.query(Account).get(self.account_id)
         remote_label_names = {l.display_name.rstrip()[:MAX_LABEL_NAME_LENGTH]
                               for l in raw_folders}
 
@@ -81,7 +81,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
             format(account.email_address)
 
         local_labels = {l.name: l for l in db_session.query(Label).filter(
-                        Label.account_id == account_id).all()}
+                        Label.account_id == self.account_id).all()}
 
         # Delete labels no longer present on the remote.
         # Note that the label with canonical_name='all' cannot be deleted;
@@ -89,7 +89,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
         discard = set(local_labels) - set(remote_label_names)
         for name in discard:
             log.info('Label deleted from remote',
-                     account_id=account_id, name=name)
+                     account_id=self.account_id, name=name)
             db_session.delete(local_labels[name])
 
         # Create new labels, folders
