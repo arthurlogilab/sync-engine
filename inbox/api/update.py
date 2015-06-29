@@ -17,7 +17,7 @@ def update_message(message, request_data, db_session):
     if label_public_ids is not None:
         update_message_labels(message, db_session, label_public_ids)
     elif folder_public_id is not None:
-        update_message_labels(message, db_session, folder_public_id)
+        update_message_folder(message, db_session, folder_public_id)
 
 
 def update_thread(thread, request_data, db_session):
@@ -31,7 +31,7 @@ def update_thread(thread, request_data, db_session):
         if label_public_ids is not None:
             update_message_labels(message, db_session, label_public_ids)
         elif folder_public_id is not None:
-            update_message_labels(message, db_session, folder_public_id)
+            update_message_folder(message, db_session, folder_public_id)
 
 
 def parse(request_data, accept_labels):
