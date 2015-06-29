@@ -4,6 +4,10 @@ from inbox.models.action_log import schedule_action
 from inbox.models import Category
 # STOPSHIP(emfree): better naming/structure for this module
 
+# TODO[k]: Instead of directly updating message.is_read, is_starred and
+# .categories, call message.update_metadata() /after/ action is
+# scheduled?
+
 
 def update_message(message, request_data, db_session):
     accept_labels = message.namespace.account.provider == 'gmail'
@@ -46,8 +50,9 @@ def parse(request_data, accept_labels):
         label_public_ids = request_data.pop('labels', None)
         if (label_public_ids is not None and
                 not isinstance(label_public_ids, list)):
-            # STOPSHIP(emfree): should also check that labels is an array of
-            # /strings/
+            raise InputError('"labels" must be a list of strings')
+        if (label_public_ids is not None and
+                not all(isinstance(l, basestring) for l in label_public_ids)):
             raise InputError('"labels" must be a list of strings')
         if request_data:
             raise InputError('Only the "unread", "starred" and "labels" '
@@ -57,7 +62,7 @@ def parse(request_data, accept_labels):
         folder_public_id = request_data.pop('folder', None)
         if (folder_public_id is not None and
                 not isinstance(folder_public_id, basestring)):
-            raise InputError('"folder" must be a list of strings')
+            raise InputError('"folder" must be a string')
         if request_data:
             raise InputError('Only the "unread", "starred" and "folder" '
                              'attributes can be changed')
@@ -80,12 +85,13 @@ def update_message_labels(message, db_session, label_public_ids):
     categories = set()
     for id_ in label_public_ids:
         try:
-            cat = db_session.query(Category).filter(
+            category = db_session.query(Category).filter(
                 Category.namespace_id == message.namespace_id,
                 Category.public_id == id_).one()
-            categories.add(cat)
+            categories.add(category)
         except NoResultFound:
             raise InputError(u'Label {} does not exist'.format(id_))
+
     added_categories = categories - set(message.categories)
     removed_categories = set(message.categories) - categories
 
@@ -98,24 +104,23 @@ def update_message_labels(message, db_session, label_public_ids):
         'trash': '\\Trash',
         'spam': '\\Spam'
     }
-    for cat in added_categories:
-        if cat.name in special_label_map:
-            added_labels.append(special_label_map[cat.name])
-        elif cat.name == 'drafts':
-            raise InputError('The "drafts" label cannot be changed')
-        elif cat.name == 'sent':
-            raise InputError('The "sent" label cannot be changed')
+    for category in added_categories:
+        if category.name in special_label_map:
+            added_labels.append(special_label_map[category.name])
+        elif category.name in ('drafts', 'sent'):
+            raise InputError('The "{}" label cannot be changed'.
+                             format(category.name))
         else:
-            added_labels.append(cat.display_name)
-    for cat in removed_categories:
-        if cat.name in special_label_map:
-            removed_labels.append(special_label_map[cat.name])
-        elif cat.name == 'drafts':
-            raise InputError('The "drafts" label cannot be changed')
-        elif cat.name == 'sent':
-            raise InputError('The "sent" label cannot be changed')
+            added_labels.append(category.display_name)
+
+    for category in removed_categories:
+        if category.name in special_label_map:
+            removed_labels.append(special_label_map[category.name])
+        elif category.name in ('drafts', 'sent'):
+            raise InputError('The "{}" label cannot be changed'.
+                             format(category.name))
         else:
-            removed_labels.append(cat.display_name)
+            removed_labels.append(category.display_name)
 
     # Optimistically update message state.
     message.categories = categories
@@ -128,7 +133,7 @@ def update_message_labels(message, db_session, label_public_ids):
 
 def update_message_folder(message, db_session, folder_public_id):
     try:
-        cat = db_session.query(Category).filter(
+        category = db_session.query(Category).filter(
             Category.namespace_id == message.namespace_id,
             Category.public_id == folder_public_id).one()
     except NoResultFound:
@@ -136,7 +141,7 @@ def update_message_folder(message, db_session, folder_public_id):
                          format(folder_public_id))
 
     # STOPSHIP(emfree): what about sent/inbox duality?
-    if cat not in message.categories:
-        message.categories = [cat]
+    if category not in message.categories:
+        message.categories = [category]
         schedule_action('move', message, message.namespace_id, db_session,
-                        destination=cat.display_name)
+                        destination=category.display_name)
