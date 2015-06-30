@@ -1,8 +1,6 @@
 import json
 import time
-from tests.util.base import add_fake_message, add_fake_thread
-
-__all__ = ['api_client', 'db', 'thread']
+from tests.util.base import add_fake_message
 
 
 def get_cursor(api_client, timestamp):
@@ -22,8 +20,11 @@ def test_invalid_input(api_client):
 
 
 def test_events_are_condensed(api_client, message):
-    """Test that multiple revisions of the same object are rolled up in the
-    delta response."""
+    """
+    Test that multiple revisions of the same object are rolled up in the
+    delta response.
+
+    """
     ts = int(time.time() + 22)
     cursor = get_cursor(api_client, ts)
 
@@ -36,11 +37,53 @@ def test_events_are_condensed(api_client, message):
 
     # Check that successive modifies are condensed.
     sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['deltas']) == 1
-    delta = sync_data['deltas'][0]
-    assert (delta['object'] == 'message' and
-            delta['event'] == 'modify')
+    deltas = sync_data['deltas']
+    # A message modify propagates to its thread
+    message_deltas = [d for d in deltas if d['object'] == 'message']
+    assert len(message_deltas) == 1
+
+    delta = message_deltas[0]
+    assert delta['object'] == 'message' and delta['event'] == 'modify'
     assert delta['attributes']['unread'] is True
+
+
+def test_message_events_are_propagated_to_thread(api_client, message):
+    """
+    Test that a revision to a message's `propagated_attributes` returns a delta
+    for the message and for its thread.
+
+    """
+    ts = int(time.time() + 22)
+    cursor = get_cursor(api_client, ts)
+
+    message = api_client.get_data('/messages/')[0]
+    message_id = message['id']
+    assert message['unread'] is True
+
+    thread = api_client.get_data('/threads/{}'.format(message['thread_id']))
+    assert thread['unread'] is True
+
+    # Modify a `propagated_attribute` of the message
+    message_path = '/messages/{}'.format(message_id)
+    api_client.put_data(message_path, {'unread': False})
+
+    # Verify that a `message` and a `thread` modify delta is returned
+    sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
+    deltas = sync_data['deltas']
+    assert len(deltas) == 2
+
+    message_deltas = [d for d in deltas if d['object'] == 'message']
+    assert len(message_deltas) == 1
+    delta = message_deltas[0]
+    assert delta['object'] == 'message' and delta['event'] == 'modify'
+    assert delta['attributes']['unread'] is False
+
+    thread_deltas = [d for d in deltas if d['object'] == 'thread']
+    assert len(thread_deltas) == 1
+    delta = thread_deltas[0]
+    assert delta['object'] == 'thread' and delta['event'] == 'modify'
+    assert delta['attributes']['unread'] is False
+    assert delta['attributes']['version'] == thread['version'] + 1
 
 
 def test_handle_missing_objects(api_client, db, thread, default_namespace):

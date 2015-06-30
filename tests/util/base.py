@@ -394,6 +394,16 @@ def add_fake_event(db_session, namespace_id, calendar=None,
     return event
 
 
+def add_fake_category(db_session, namespace_id, display_name, name=None):
+    from inbox.models import Category
+    category = Category(namespace_id=namespace_id,
+                        display_name=display_name,
+                        name=name)
+    db_session.add(category)
+    db_session.commit()
+    return category
+
+
 @fixture
 def new_account(db):
     return add_fake_account(db.session)

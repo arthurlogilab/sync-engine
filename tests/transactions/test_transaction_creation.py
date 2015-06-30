@@ -48,6 +48,38 @@ def test_message_updates_create_transaction(db, default_namespace):
         assert transaction.command == 'update'
 
 
+def test_message_updates_create_thread_transaction(db, default_namespace):
+    with db.session.no_autoflush:
+        thr = add_fake_thread(db.session, default_namespace.id)
+        msg = add_fake_message(db.session, default_namespace.id, thr)
+
+        transaction = get_latest_transaction(db.session, 'thread', thr.id,
+                                             default_namespace.id)
+        assert (transaction.record_id == thr.id and
+                transaction.object_type == 'thread')
+        assert transaction.command == 'update'
+
+        # An update to one of the message's propagated_attributes creates a
+        # revision for the thread
+        msg.is_read = True
+        db.session.commit()
+
+        new_transaction = get_latest_transaction(db.session, 'thread', thr.id,
+                                                 default_namespace.id)
+        assert new_transaction.id != transaction.id
+        assert (new_transaction.record_id == thr.id and
+                new_transaction.object_type == 'thread')
+        assert new_transaction.command == 'update'
+
+        # An update to one of its other attributes does not
+        msg.subject = 'Ice cubes and dogs'
+        db.session.commit()
+
+        same_transaction = get_latest_transaction(db.session, 'thread', thr.id,
+                                                  default_namespace.id)
+        assert same_transaction.id == new_transaction.id
+
+
 def test_object_type_distinguishes_messages_and_drafts(db, default_namespace):
     with db.session.no_autoflush:
         thr = add_fake_thread(db.session, default_namespace.id)
@@ -126,7 +158,10 @@ def test_object_deletions_create_transaction(db, default_namespace):
 
 
 def test_transaction_objects_mapped_for_all_models(db, default_namespace):
-    """Test that all subclasses of HasRevisions are mapped by the
-    transaction_objects() function."""
+    """
+    Test that all subclasses of HasRevisions are mapped by the
+    transaction_objects() function.
+
+    """
     assert set(HasRevisions.__subclasses__()).issubset(
         transaction_objects().values())
