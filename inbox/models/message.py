@@ -463,6 +463,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         return ['parts']
 
     @property
+    def propagated_attributes(self):
+        return ['is_read', 'is_starred', 'messagecategories']
+
+    @property
     def has_attached_events(self):
         return 'text/calendar' in [p.block.content_type for p in self.parts]
 

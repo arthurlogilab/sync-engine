@@ -12,20 +12,41 @@ class HasRevisions(ABCMixin):
     """Mixin for tables that should be versioned in the transaction log."""
     @property
     def versioned_relationships(self):
-        """May be overriden by subclasses. This should be the list of
+        """
+        May be overriden by subclasses. This should be the list of
         relationship attribute names that should trigger an update revision
         when changed. (We want to version changes to some, but not all,
-        relationship attributes.)"""
+        relationship attributes.)
+
+        """
+        return []
+
+    @property
+    def propagated_attributes(self):
+        """
+        May be overridden by subclasses. This is the list of attribute names
+        that should trigger an update revision for a /related/ object -
+        for example, when a message's `is_read` or `categories` is changed,
+        we want an update revision created for the message's thread as well.
+        Such manual propagation is required because changes to related objects
+        are not reflected in the related attribute's history, only additions
+        and deletions are. For example, thread.messages.history will
+        not reflect a change made to one of the thread's messages.
+
+        """
         return []
 
     @property
     def should_suppress_transaction_creation(self):
-        """May be overridden by subclasses. We don't want to version certain
-        specific objects -- for example, Block instances that are just raw
+        """
+        May be overridden by subclasses. We don't want to version certain
+        specific objects - for example, Block instances that are just raw
         message parts and not real attachments. Use this property to suppress
         revisions of such objects. (The need for this is really an artifact of
         current deficiencies in our models. We should be able to get rid of it
-        eventually.)"""
+        eventually.)
+
+        """
         return False
 
     # Must be defined by subclasses

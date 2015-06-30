@@ -1,10 +1,10 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Index, Enum
+from sqlalchemy import (Column, Integer, String, ForeignKey, Index, Enum,
+                        inspect)
 from sqlalchemy.orm import relationship
 
 from inbox.models.base import MailSyncBase
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.namespace import Namespace
-from inbox.sqlalchemy_ext.util import BigJSON
 
 
 class Transaction(MailSyncBase, HasPublicID):
@@ -19,9 +19,6 @@ class Transaction(MailSyncBase, HasPublicID):
     record_id = Column(Integer, nullable=False, index=True)
     object_public_id = Column(String(191), nullable=False, index=True)
     command = Column(Enum('insert', 'update', 'delete'), nullable=False)
-    # The API representation of the object at the time the transaction is
-    # generated.
-
 
 Index('namespace_id_deleted_at', Transaction.namespace_id,
       Transaction.deleted_at)
@@ -51,6 +48,22 @@ def create_revision(obj, session, revision_type):
                            object_public_id=obj.public_id,
                            namespace_id=obj.namespace.id)
     session.add(revision)
+
+
+def propagate_changes(session):
+    # TODO[k]:
+    # 1/ How should many changes to a thread's messages be propagated -
+    # i.e. should it result in incrementing thread.version by ONE or MANY?
+    # 2/ Combine propagate_changes()/ increment_versions()?
+    # 3/ Should this manipulate thread.version directly?
+    from inbox.models.message import Message
+
+    for obj in session.dirty:
+        if isinstance(obj, Message):
+            obj_state = inspect(obj)
+            for attr in obj.propagated_attributes:
+                if getattr(obj_state.attrs, attr).history.has_changes():
+                    obj.thread.changed = obj.thread.changed + 1
 
 
 def increment_versions(session):
