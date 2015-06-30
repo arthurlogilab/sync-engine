@@ -487,9 +487,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         parsed = mime.from_string(self.full_body.data)
         return parsed.headers.get(header)
 
-    def update_metadata(self, session, is_draft):
-        account = session.query(Namespace).get(self.namespace_id).account
-
+    def update_metadata(self, is_draft):
+        account = self.namespace.account
         if account.discriminator == 'easaccount':
             uids = self.easuids
         else:

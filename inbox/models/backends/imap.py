@@ -162,16 +162,15 @@ class ImapUid(MailSyncBase):
         remove = local_labels - remote_labels
         add = remote_labels - local_labels
 
-        with object_session(self).no_autoflush as session:
-            for name, canonical_name in remove:
-                label = Label.find_or_create(session, self.account, name,
-                                             canonical_name)
-                self.labels.remove(label)
+        for name, canonical_name in remove:
+            label = Label.find_or_create(object_session(self), self.account,
+                                         name, canonical_name)
+            self.labels.remove(label)
 
-            for name, canonical_name in add:
-                label = Label.find_or_create(session, self.account, name,
-                                             canonical_name)
-                self.labels.add(label)
+        for name, canonical_name in add:
+            label = Label.find_or_create(object_session(self), self.account,
+                                         name, canonical_name)
+            self.labels.add(label)
 
     @property
     def namespace(self):

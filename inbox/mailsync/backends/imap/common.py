@@ -30,8 +30,7 @@ def all_uids(account_id, session, folder_id):
 
 def update_message_metadata(session, imapuid):
     # Update the message's metadata.
-    # STOPSHIP(emfree): ensure this properly creates a thread revision.
-    imapuid.message.update_metadata(session, imapuid.is_draft)
+    imapuid.message.update_metadata(imapuid.is_draft)
 
 
 def update_metadata(account_id, session, folder_name, folder_id, uids,
@@ -86,7 +85,7 @@ def remove_deleted_uids(account_id, session, uids, folder_id):
         # Don't outright delete messages. Just mark them as 'deleted' and wait
         # for the asynchronous dangling-message-collector to delete them.
         for message in affected_messages:
-            message.update_metadata(session, message.is_draft)
+            message.update_metadata(message.is_draft)
             if not message.imapuids:
                 message.mark_for_deletion()
 
@@ -162,7 +161,7 @@ def create_imap_message(db_session, log, account, folder, msg):
 
     # Update the message's metadata
     with db_session.no_autoflush:
-        new_message.update_metadata(db_session, imapuid.is_draft)
+        new_message.update_metadata(imapuid.is_draft)
 
     update_contacts_from_message(db_session, new_message, account.namespace)
 

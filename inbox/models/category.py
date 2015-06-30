@@ -4,14 +4,14 @@ from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasRevisions
+from inbox.models.mixins import HasRevisions, HasPublicID
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.sqlalchemy_ext.util import generate_public_id
 from inbox.log import get_logger
 log = get_logger()
 
 
-class Category(MailSyncBase, HasRevisions):
+class Category(MailSyncBase, HasRevisions, HasPublicID):
     @property
     def API_OBJECT_NAME(self):
         return self.type_
@@ -23,8 +23,8 @@ class Category(MailSyncBase, HasRevisions):
                                      ondelete='CASCADE'), nullable=False)
     namespace = relationship('Namespace', load_on_pending=True)
 
-    public_id = Column(String(MAX_INDEXABLE_LENGTH), nullable=False,
-                       default=generate_public_id, index=True)
+    #public_id = Column(String(MAX_INDEXABLE_LENGTH), nullable=False,
+    #                   default=generate_public_id, index=True)
 
     # STOPSHIP(emfree): need to index properly for API filtering performance.
     name = Column(String(MAX_INDEXABLE_LENGTH), nullable=True)

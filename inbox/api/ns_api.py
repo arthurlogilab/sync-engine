@@ -149,7 +149,13 @@ def thread_query_api():
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('view', type=view, location='args')
 
+    # For backwards-compatibility -- remove after deprecating tags API.
+    g.parser.add_argument('tags', type=bounded_str, location='args')
+
     args = strict_parse_args(g.parser, request.args)
+
+    # For backwards-compatibility -- remove after deprecating tags API.
+    in_ = args['in'] or args['tags']
 
     threads = filtering.threads(
         namespace_id=g.namespace.id,
@@ -165,7 +171,7 @@ def thread_query_api():
         last_message_before=args['last_message_before'],
         last_message_after=args['last_message_after'],
         filename=args['filename'],
-        in_=args['in'],
+        in_=in_,
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
