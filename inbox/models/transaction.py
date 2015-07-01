@@ -51,24 +51,31 @@ def create_revision(obj, session, revision_type):
 
 
 def propagate_changes(session):
-    # TODO[k]:
-    # 1/ How should many changes to a thread's messages be propagated -
-    # i.e. should it result in incrementing thread.version by ONE or MANY?
-    # 2/ Combine propagate_changes()/ increment_versions()?
-    # 3/ Should this manipulate thread.version directly?
-    from inbox.models.message import Message
+    """
+    Mark an object's related object as dirty when certain attributes of the
+    object (its `propagated_attributes`) change.
 
+    For example, when a message's `is_read`, `is_starred` or `categories`
+    changes, the message.thread is marked as dirty.
+
+    """
+    from inbox.models.message import Message
     for obj in session.dirty:
         if isinstance(obj, Message):
             obj_state = inspect(obj)
             for attr in obj.propagated_attributes:
                 if getattr(obj_state.attrs, attr).history.has_changes():
-                    obj.thread.changed = obj.thread.changed + 1
+                    obj.thread.dirty = True
 
 
 def increment_versions(session):
     from inbox.models.thread import Thread
-    for obj in session.dirty:
-        if isinstance(obj, Thread) and obj.has_versioned_changes():
-            # This issues SQL for an atomic increment.
-            obj.version = Thread.version + 1
+
+    is_dirty = lambda x: ((x in session.dirty) or
+                          (hasattr(x, 'dirty') and getattr(x, 'dirty')))
+
+    for obj in session:
+        if isinstance(obj, Thread) and is_dirty(obj):
+            if obj.has_versioned_changes():
+                # This issues SQL for an atomic increment.
+                obj.version = Thread.version + 1

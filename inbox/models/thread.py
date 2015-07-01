@@ -40,8 +40,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     recentdate = Column(DateTime, nullable=False, index=True)
     snippet = Column(String(191), nullable=True, default='')
     version = Column(Integer, nullable=True, server_default='0')
-    # TODO[k]: Rename to be more descriptive
-    changed = Column(Integer, nullable=True, server_default='0')
 
     @validates('subject')
     def compute_cleaned_up_subject(self, key, value):

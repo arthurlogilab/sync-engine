@@ -1,5 +1,6 @@
 import abc
 from datetime import datetime
+
 from sqlalchemy import Column, DateTime, String, inspect, Boolean, sql
 from sqlalchemy.ext.hybrid import hybrid_property, Comparator
 
@@ -53,9 +54,15 @@ class HasRevisions(ABCMixin):
     API_OBJECT_NAME = abc.abstractproperty()
 
     def has_versioned_changes(self):
-        """Return True if the object has changes on column properties, or on
-        any relationship attributes named in self.versioned_relationships."""
+        """
+        Return True if the object has changes on any of its column properties
+        or any relationship attributes named in self.versioned_relationships,
+        or has been manually marked as dirty (the special 'dirty' instance
+        attribute is set to True).
+
+        """
         obj_state = inspect(self)
+
         versioned_attribute_names = list(self.versioned_relationships)
         for mapper in obj_state.mapper.iterate_to_root():
             for attr in mapper.column_attrs:
@@ -64,6 +71,11 @@ class HasRevisions(ABCMixin):
         for attr_name in versioned_attribute_names:
             if getattr(obj_state.attrs, attr_name).history.has_changes():
                 return True
+
+        if hasattr(self, 'dirty') and getattr(self, 'dirty'):
+            self.dirty = False
+            return True
+
         return False
 
 
