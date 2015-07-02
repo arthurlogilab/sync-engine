@@ -72,10 +72,6 @@ class HasRevisions(ABCMixin):
             if getattr(obj_state.attrs, attr_name).history.has_changes():
                 return True
 
-        if hasattr(self, 'dirty') and getattr(self, 'dirty'):
-            self.dirty = False
-            return True
-
         return False
 
 
